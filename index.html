@@ -40,27 +40,50 @@
       alignment-baseline: middle;
     }
 
-    /* 让 Venn 的圆有 CMYK 混合效果，对其他图基本无影响 */
     circle {
       mix-blend-mode: multiply;
+    }
+
+    #processText {
+      max-width: 1000px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 0 0 20px 0;
     }
   </style>
 </head>
 <body>
   <h3>Parallelogram vector diagram</h3>
   <div id="paraChart"></div>
+  <p id="processText">
+    Process: First, I took a screenshot of the chart and said to ChatGPT, "Help me draw this chart with D3.js." It gave me the initial code. Then, I took a screenshot of the five detailed requirements of D3.js and sent it to ChatGPT. The code it gave me included interactive effects, but the two characters below the parallelogram couldn't be displayed. So, I asked it to widen the canvas, and then the characters in the chart were complete. Then, I found that ChatGPT only drew two arrows for me and didn't draw the two parallel lines of the parallelogram. So, I wrote, "Help me draw it into a parallelogram," and then it gave me this chart.
+  </p>
 
   <h3>p₁ / p₂ + position diagram</h3>
   <div id="probChart"></div>
+  <p id="processText">
+    Process: I took a screenshot of the chart and sent it to ChatGPT, saying "Help me draw this chart using D3.js". It provided me with the initial code.Then I took a screenshot of the detailed 5-point requirements of D3.js and sent it to ChatGPT. It generated a rough chart, but the details did not match the reference image very closely. And then, I told it to "add the coordinate axis nodes to the left image", "change the coordinate axis of the right image to be the same as the reference image without intersections", and "move the position to the upper right of the x-axis". After that, the current chart was produced.
+  </p>
 
   <h3>Models over Years（Area Chart）</h3>
   <div id="areaChart"></div>
+  <p id="processText">
+    Process: I sent the reference image and the assignment requirements to Chatgpt as screenshots and said, "Help me draw this chart using D3.js according to the requirements on the image." Then, it gave me a chart that presented the general content, but it was a smooth curve instead of the chart with sharp corners in the reference image. So, I said, "It should be a zigzag chart with sharp corners like the reference image, not a wavy one." It then provided me with a chart drawn using the curveLinear model, which was the same as the reference image. After that, I manually adjusted the exact values of each node and completed it.
+ </p>
 
   <h3>Little robot</h3>
   <div id="robotChart"></div>
+    <p id="processText">
+    Process: The small robot’s head and hands of in this picture have been added with a shaking transition effect. And there is an interactive effect here. When the cursor moves over the pencil, the pencil will turn orange. I took screenshots of the reference image and the assignment requirements and sent them to Chatgpt, saying "Based on the requirements in the picture, help me draw this chart using D3.js". The reference image was at a 45-degree angle from the side, but it gave me a frontal image, so I said "Adjust the camera angle to a 45-degree angle from the side and add transition effects (for example, the hand holding the pencil can shake) and interaction effects (for example, when the cursor moves over the pencil in the hand, the pencil will change color). 
+So this is the completed interaction effect and transition effect. Then I made further details adjustments, such as 'The head rotates clockwise 30 degrees to look at the paper in the right hand', and finally completed this picture.
+ </p>
 
-  <h3>Venn diagram</h3>
+  <h3>Venn Diagram</h3>
   <div id="vennChart"></div>
+  <p id="processText">
+    Process:  The three circles in this picture have been given interactive effects. When the cursor moves over a circle, the color will deepen, and the name corresponding to that circle will appear beside the cursor. The Roman font has also been given the same interactive effect. When the cursor moves over a character, the character will enlarge.
+I took screenshots of the reference diagram and the assignment requirements and sent them to Chatgpt, saying "Based on the requirements in the diagram, please use D3.js to draw this chart for me." Then, GPT gave me a rough diagram, and I made some minor adjustments, such as "remove the black border", "place 'replace', 'delete', 'rewrite' outside the circle", "change the color overlap effect between circles to CMYK mode overlay". After generating the new diagram, I adjusted the text positions. So, That's basically it.
+ </p>
 
   <!-- 平行四边形 和 p₁/p₂ 图共用的 tooltip -->
   <div id="tooltip" class="tooltip"></div>
@@ -939,7 +962,7 @@
       .attr("width", width)
       .attr("height", height);
 
-    // 三个圆（保持给定位置）
+    // 三个圆
     const circlesData = [
       {id:"delete",  label:"Delete",  cx:379, cy:434, r:170, color:"rgb(199,196,231)"},
       {id:"replace", label:"Replace", cx:471, cy:234, r:170, color:"rgb(201,190,189)"},
@@ -960,14 +983,12 @@
       .style("fill-opacity", 0)
       .attr("stroke","none");
 
-    // 半径与透明度过渡动画
     circles.transition()
       .duration(1000)
       .delay((d,i)=>i*250)
       .attr("r", d => d.r)
       .style("fill-opacity", 0.75);
 
-    // 圆 hover 交互
     circles
       .on("mouseover", function(event,d){
         d3.select(this).transition().duration(200).style("fill-opacity",0.9);
@@ -983,7 +1004,6 @@
         tooltip.style("opacity",0);
       });
 
-    // 外部文字
     const setLabels = [
       {text:"Replace", x:500, y:50,  anchor:"middle"},
       {text:"Delete",  x:160, y:400, anchor:"end"},
@@ -1002,7 +1022,6 @@
       .style("font-family","Times New Roman, serif")
       .text(d => d.text);
 
-    // 罗马数字（I 向下 40px、向右 10px）
     const regionLabels = [
       {text:"I",   x:321, y:453},
       {text:"II",  x:463, y:205},
@@ -1027,13 +1046,11 @@
       .style("opacity",0)
       .text(d => d.text);
 
-    // 罗马数字淡入过渡
     regions.transition()
       .duration(800)
       .delay(900)
       .style("opacity",1);
 
-    // 罗马数字 hover 放大
     regions
       .on("mouseover", function(){
         d3.select(this)
