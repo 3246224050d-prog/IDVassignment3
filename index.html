@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>D3.js 平行四边形向量图</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { margin: 0; padding: 20px; font-family: sans-serif; }
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      padding: 4px 8px;
+      font-size: 12px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+  </style>
+</head>
+<body>
+<div id="chart"></div>
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+// ---------------- 参数定义 ----------------
+const cols = 10;
+const rows = 5;
+const cellSize = 60;
+const margin = { top: 40, right: 60, bottom: 100, left: 60 };
+
+const width  = cols * cellSize + margin.left + margin.right;
+const height = rows * cellSize + margin.top + margin.bottom;
+
+const svg = d3.select("#chart")
+  .append("svg")
+  .attr("width", width)
+  .attr("height", height);
+
+// 网格辅助线
+function xScale(x) { return margin.left + x * cellSize; }
+function yScale(y) { return margin.top + (rows - y) * cellSize; }
+
+for (let i = 0; i <= cols; i++) {
+  svg.append("line")
+    .attr("x1", xScale(i))
+    .attr("y1", margin.top)
+    .attr("x2", xScale(i))
+    .attr("y2", margin.top + rows * cellSize)
+    .attr("stroke", "#eee");
+}
+for (let j = 0; j <= rows; j++) {
+  const y = margin.top + j * cellSize;
+  svg.append("line")
+    .attr("x1", margin.left)
+    .attr("y1", y)
+    .attr("x2", margin.left + cols * cellSize)
+    .attr("y2", y)
+    .attr("stroke", "#eee");
+}
+
+// ---------------- 坐标定义 ----------------
+// 定义成平行四边形顶点
+const pts = {
+  e1a: { x: 8, y: 4 },   // e₁^α
+  e2a: { x: 4, y: 4 },   // e₂^α
+  e1b: { x: 6, y: 1 },   // e₁^β
+  e2b: { x: 2, y: 1 }    // e₂^β
+};
+
+// ---------------- 绘制平行四边形 ----------------
+const parallelogram = [
+  [pts.e2b, pts.e1b],
+  [pts.e1b, pts.e1a],
+  [pts.e1a, pts.e2a],
+  [pts.e2a, pts.e2b]
+];
+
+// 加箭头
+const defs = svg.append("defs");
+defs.append("marker")
+  .attr("id", "arrow")
+  .attr("viewBox", "0 -5 10 10")
+  .attr("refX", 10)
+  .attr("refY", 0)
+  .attr("markerWidth", 6)
+  .attr("markerHeight", 6)
+  .attr("orient", "auto")
+  .append("path")
+  .attr("d", "M0,-5L10,0L0,5")
+  .attr("fill", "#333");
+
+// 绘制平行四边形边
+svg.selectAll(".side")
+  .data(parallelogram)
+  .enter()
+  .append("line")
+  .attr("x1", d => xScale(d[0].x))
+  .attr("y1", d => yScale(d[0].y))
+  .attr("x2", d => xScale(d[0].x))
+  .attr("y2", d => yScale(d[0].y))
+  .attr("stroke", "#333")
+  .attr("stroke-width", 2)
+  .attr("marker-end", "url(#arrow)")
+  .transition()
+  .duration(1200)
+  .delay((d, i) => i * 250)
+  .attr("x2", d => xScale(d[1].x))
+  .attr("y2", d => yScale(d[1].y));
+
+// ---------------- 绘制虚线对角 ----------------
+svg.append("line")
+  .attr("x1", xScale(pts.e2b.x))
+  .attr("y1", yScale(pts.e2b.y))
+  .attr("x2", xScale(pts.e2b.x))
+  .attr("y2", yScale(pts.e2b.y))
+  .attr("stroke", "#2c6db3")
+  .attr("stroke-width", 2)
+  .attr("stroke-dasharray", "6,4")
+  .attr("marker-end", "url(#arrow)")
+  .transition()
+  .duration(1000)
+  .delay(1000)
+  .attr("x2", xScale(pts.e1a.x))
+  .attr("y2", yScale(pts.e1a.y));
+
+svg.append("line")
+  .attr("x1", xScale(pts.e2a.x))
+  .attr("y1", yScale(pts.e2a.y))
+  .attr("x2", xScale(pts.e2a.x))
+  .attr("y2", yScale(pts.e2a.y))
+  .attr("stroke", "#6baed6")
+  .attr("stroke-width", 2)
+  .attr("stroke-dasharray", "6,4")
+  .attr("marker-end", "url(#arrow)")
+  .transition()
+  .duration(1000)
+  .delay(1300)
+  .attr("x2", xScale(pts.e1b.x))
+  .attr("y2", yScale(pts.e1b.y));
+
+// ---------------- 绘制标签 ----------------
+function drawLabel(p, alphaOrBeta, index, offsetX, offsetY) {
+  const tx = xScale(p.x) + (offsetX || 0);
+  const ty = yScale(p.y) + (offsetY || 0);
+  const text = svg.append("text")
+    .attr("x", tx)
+    .attr("y", ty)
+    .attr("font-family", "Times New Roman")
+    .attr("font-style", "italic")
+    .attr("font-weight", "bold")
+    .attr("font-size", 24)
+    .attr("fill", "#000000")
+    .style("opacity", 0);
+  text.text("e");
+  text.append("tspan")
+    .attr("baseline-shift", "super")
+    .attr("font-size", "60%")
+    .text(alphaOrBeta);
+  text.append("tspan")
+    .attr("baseline-shift", "sub")
+    .attr("font-size", "60%")
+    .text(index);
+  text.transition().delay(800).duration(600).style("opacity", 1);
+}
+
+drawLabel(pts.e1a, "α", "1",  15, -15);
+drawLabel(pts.e2a, "α", "2", -20, -15);
+drawLabel(pts.e1b, "β", "1",  15,  25);
+drawLabel(pts.e2b, "β", "2", -20,  25);
+
+// ---------------- 中点交叉点 ----------------
+const intersection = { x: (pts.e1a.x + pts.e2b.x)/2, y: (pts.e1a.y + pts.e2b.y)/2 };
+svg.append("circle")
+  .attr("cx", xScale(intersection.x))
+  .attr("cy", yScale(intersection.y))
+  .attr("r", 0)
+  .attr("fill", "#333")
+  .transition()
+  .delay(2200)
+  .duration(400)
+  .attr("r", 4);
+</script>
+</body>
+</html>
