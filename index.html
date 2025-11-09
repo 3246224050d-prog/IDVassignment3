@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>D3.js 四图合集</title>
+  <title>D3.js 五图合集</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body {
@@ -31,13 +31,18 @@
       border-radius: 4px;
       white-space: nowrap;
       opacity: 0;
-      transition: opacity 0.15s;
+      transition: opacity 0.2s;
     }
 
     .axis text { font-size: 12px; }
     .legend text {
       font-size: 13px;
       alignment-baseline: middle;
+    }
+
+    /* 让 Venn 的圆有 CMYK 混合效果，对其他图基本无影响 */
+    circle {
+      mix-blend-mode: multiply;
     }
   </style>
 </head>
@@ -51,11 +56,16 @@
   <h3>Models over Years（Area Chart）</h3>
   <div id="areaChart"></div>
 
-  <h3>Small robot</h3>
+  <h3>Little robot</h3>
   <div id="robotChart"></div>
+
+  <h3>Venn diagram</h3>
+  <div id="vennChart"></div>
 
   <!-- 平行四边形 和 p₁/p₂ 图共用的 tooltip -->
   <div id="tooltip" class="tooltip"></div>
+  <!-- Venn 图单独的 tooltip -->
+  <div id="vennTooltip" class="tooltip"></div>
 
   <script>
   // ================== 图 1：平行四边形（带交互） ==================
@@ -815,13 +825,13 @@
       .attr("stroke-width", 2)
       .attr("stroke-linejoin", "round");
 
-    // 1. 椅子（俯视45° 长方体）
+    // 椅子
     const bench = g.append("g");
     bench.append("polygon").attr("points", "0,210 260,160 480,190 220,240");
     bench.append("polygon").attr("points", "0,210 0,290 220,320 220,240");
     bench.append("polygon").attr("points", "220,240 480,190 480,270 220,320");
 
-    // 2. 头部（水平镜像 + 初始逆时针20°）
+    // 头部
     const headGroup = g.append("g");
 
     headGroup.append("polygon").attr("points", "250,40 340,60 340,140 250,120");
@@ -835,7 +845,7 @@
     face.append("line").attr("x1", 285).attr("y1", 105).attr("x2", 305).attr("y2", 109);
 
     const headPivotX = 295, headPivotY = 140;
-    const baseHeadAngle = -20; // 初始角度：略低头看纸
+    const baseHeadAngle = -20;
 
     function headTransform(angle) {
       return `translate(${headPivotX},${headPivotY}) scale(-1,1) rotate(${angle}) translate(${-headPivotX},${-headPivotY})`;
@@ -843,7 +853,7 @@
 
     headGroup.attr("transform", headTransform(baseHeadAngle));
 
-    // 3. 身体（坐在椅子上）
+    // 身体
     const body = g.append("g").attr("stroke-linecap", "round");
     body.append("path").attr("d", "M295,140 L295,190 L300,240");
     body.append("path").attr("d", "M300,240 L290,290");
@@ -851,7 +861,7 @@
     body.append("ellipse").attr("cx", 290).attr("cy", 302).attr("rx", 11).attr("ry", 8);
     body.append("ellipse").attr("cx", 325).attr("cy", 310).attr("rx", 11).attr("ry", 8);
 
-    // 4. 左臂 + 铅笔（动画）
+    // 左臂 + 铅笔
     const armLeft = g.append("g");
     armLeft.append("path")
       .attr("d", "M295,185 Q255,195 235,225")
@@ -865,7 +875,7 @@
       .attr("stroke-linecap", "round").attr("stroke-width", 3);
     pencilGroup.append("polygon").attr("points", "210,195 200,190 207,200");
 
-    // 5. 右臂 + 纸
+    // 右臂 + 纸
     const armRight = g.append("g");
     armRight.append("path")
       .attr("d", "M295,188 Q330,200 345,230")
@@ -876,7 +886,7 @@
     paperGroup.append("polygon").attr("points", "340,225 380,210 405,220 365,235");
     paperGroup.append("path").attr("d", "M380,210 Q375,225 365,235");
 
-    // 6. 左手摇晃动画
+    // 左手摇晃
     const pivotX = 295, pivotY = 185; let swingDir = 1;
     armLeft.attr("transform", `rotate(-10,${pivotX},${pivotY})`);
     d3.interval(() => {
@@ -885,7 +895,7 @@
         .attr("transform", `rotate(${-10 + swingDir * 6},${pivotX},${pivotY})`);
     }, 700);
 
-    // 7. 铅笔交互
+    // 铅笔交互
     const cx = 225, cy = 210;
     pencilGroup.style("cursor", "pointer")
       .on("mouseover", function () {
@@ -902,10 +912,10 @@
         p.selectAll("line,polygon").attr("stroke", strokeColor);
       });
 
-    // 8. 整体淡入
+    // 整体淡入
     g.attr("opacity", 0).transition().duration(900).attr("opacity", 1);
 
-    // 9. 头部左右摇晃动画
+    // 头部左右摇晃
     let headSwingDir = 1;
     const headSwingDelta = 6;
     const headSwingDuration = 700;
@@ -918,6 +928,123 @@
         .duration(headSwingDuration)
         .attr("transform", headTransform(angle));
     }, headSwingDuration);
+  })();
+
+  // ================== 图 5：Venn Diagram – Delete / Replace / Rewrite ==================
+  (function () {
+    const width = 1000, height = 660;
+
+    const svg = d3.select("#vennChart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    // 三个圆（保持给定位置）
+    const circlesData = [
+      {id:"delete",  label:"Delete",  cx:379, cy:434, r:170, color:"rgb(199,196,231)"},
+      {id:"replace", label:"Replace", cx:471, cy:234, r:170, color:"rgb(201,190,189)"},
+      {id:"rewrite", label:"Rewrite", cx:650, cy:362, r:170, color:"rgb(234,219,149)"}
+    ];
+
+    const tooltip = d3.select("#vennTooltip");
+
+    const circles = svg.selectAll("circle.set")
+      .data(circlesData)
+      .enter()
+      .append("circle")
+      .attr("class", "set")
+      .attr("cx", d => d.cx)
+      .attr("cy", d => d.cy)
+      .attr("r", 0)
+      .attr("fill", d => d.color)
+      .style("fill-opacity", 0)
+      .attr("stroke","none");
+
+    // 半径与透明度过渡动画
+    circles.transition()
+      .duration(1000)
+      .delay((d,i)=>i*250)
+      .attr("r", d => d.r)
+      .style("fill-opacity", 0.75);
+
+    // 圆 hover 交互
+    circles
+      .on("mouseover", function(event,d){
+        d3.select(this).transition().duration(200).style("fill-opacity",0.9);
+        tooltip.style("opacity",1).html(d.label);
+      })
+      .on("mousemove", event => {
+        tooltip
+          .style("left",(event.pageX+10)+"px")
+          .style("top",(event.pageY-20)+"px");
+      })
+      .on("mouseout", function(){
+        d3.select(this).transition().duration(200).style("fill-opacity",0.75);
+        tooltip.style("opacity",0);
+      });
+
+    // 外部文字
+    const setLabels = [
+      {text:"Replace", x:500, y:50,  anchor:"middle"},
+      {text:"Delete",  x:160, y:400, anchor:"end"},
+      {text:"Rewrite", x:840, y:400, anchor:"start"}
+    ];
+
+    svg.selectAll(".setLabel")
+      .data(setLabels)
+      .enter()
+      .append("text")
+      .attr("class","setLabel")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("text-anchor", d => d.anchor)
+      .style("font-size","26px")
+      .style("font-family","Times New Roman, serif")
+      .text(d => d.text);
+
+    // 罗马数字（I 向下 40px、向右 10px）
+    const regionLabels = [
+      {text:"I",   x:321, y:453},
+      {text:"II",  x:463, y:205},
+      {text:"III", x:707, y:383},
+      {text:"IV",  x:428, y:344},
+      {text:"V",   x:563, y:308},
+      {text:"VI",  x:528, y:446},
+      {text:"VII", x:507, y:369}
+    ];
+
+    const regions = svg.selectAll(".region")
+      .data(regionLabels)
+      .enter()
+      .append("text")
+      .attr("class","region")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("text-anchor","middle")
+      .style("font-size","30px")
+      .style("font-weight","bold")
+      .style("font-family","Times New Roman, serif")
+      .style("opacity",0)
+      .text(d => d.text);
+
+    // 罗马数字淡入过渡
+    regions.transition()
+      .duration(800)
+      .delay(900)
+      .style("opacity",1);
+
+    // 罗马数字 hover 放大
+    regions
+      .on("mouseover", function(){
+        d3.select(this)
+          .transition().duration(150)
+          .style("font-size","36px");
+      })
+      .on("mouseout", function(){
+        d3.select(this)
+          .transition().duration(150)
+          .style("font-size","30px");
+      });
   })();
   </script>
 </body>
