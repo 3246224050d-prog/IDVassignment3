@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>D3.js 三图合集</title>
+  <title>D3.js 四图合集</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body {
@@ -13,7 +13,11 @@
       background: #f5f7f8;
     }
     h3 { margin: 16px 0 8px; }
-    svg { background: #ffffff; }
+    svg {
+      background: #ffffff;
+      border: 1px solid #eee;
+      margin-bottom: 16px;
+    }
 
     .axis-label { font-size: 14px; font-style: italic; }
 
@@ -47,7 +51,10 @@
   <h3>Models over Years（Area Chart）</h3>
   <div id="areaChart"></div>
 
-  <!-- 平行四边形和 p₁/p₂ 图共用的 tooltip -->
+  <h3>Small robot</h3>
+  <div id="robotChart"></div>
+
+  <!-- 平行四边形 和 p₁/p₂ 图共用的 tooltip -->
   <div id="tooltip" class="tooltip"></div>
 
   <script>
@@ -311,7 +318,6 @@
       .attr("d", "M0,-5L10,0L0,5")
       .attr("fill", "#5b3a8c");
 
-    // 左半：p1/p2
     const leftMargin = { top: 40, right: 20, bottom: 80, left: 110 };
     const leftWidth  = 450;
     const leftHeight = 240;
@@ -466,7 +472,6 @@
         d3.select(this).transition().duration(150).attr("r", 3);
       });
 
-    // 右半：position 曲线
     const rightMargin = { top: 40, right: 40, bottom: 80, left: 70 };
     const rightWidth  = 380;
     const rightHeight = 240;
@@ -735,7 +740,6 @@
       .y1(yScale(0))
       .curve(d3.curveLinear);
 
-    // 这个面积图用自己的 tooltip（避免和上面的冲突）
     const tooltipArea = d3.select("body").append("div")
       .attr("class", "tooltip")
       .style("opacity", 0);
@@ -794,7 +798,127 @@
       .attr("y", 8)
       .text(d => d.name);
   })();
+
+  // ================== 图 4：小电脑人 – 俯视45° + 头部摇晃 ==================
+  (function () {
+    const width = 650, height = 420, strokeColor = "#4a5aa8";
+
+    const svg = d3.select("#robotChart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    const g = svg.append("g")
+      .attr("transform", "translate(70,30)")
+      .attr("stroke", strokeColor)
+      .attr("fill", "none")
+      .attr("stroke-width", 2)
+      .attr("stroke-linejoin", "round");
+
+    // 1. 椅子（俯视45° 长方体）
+    const bench = g.append("g");
+    bench.append("polygon").attr("points", "0,210 260,160 480,190 220,240");
+    bench.append("polygon").attr("points", "0,210 0,290 220,320 220,240");
+    bench.append("polygon").attr("points", "220,240 480,190 480,270 220,320");
+
+    // 2. 头部（水平镜像 + 初始逆时针20°）
+    const headGroup = g.append("g");
+
+    headGroup.append("polygon").attr("points", "250,40 340,60 340,140 250,120");
+    headGroup.append("polygon").attr("points", "250,40 280,20 370,40 340,60");
+    headGroup.append("polygon").attr("points", "340,60 370,40 370,120 340,140");
+    headGroup.append("polygon").attr("points", "260,55 330,70 330,125 260,110");
+
+    const face = headGroup.append("g").attr("stroke-linecap", "round");
+    face.append("line").attr("x1", 270).attr("y1", 80).attr("x2", 290).attr("y2", 83);
+    face.append("line").attr("x1", 305).attr("y1", 85).attr("x2", 320).attr("y2", 88);
+    face.append("line").attr("x1", 285).attr("y1", 105).attr("x2", 305).attr("y2", 109);
+
+    const headPivotX = 295, headPivotY = 140;
+    const baseHeadAngle = -20; // 初始角度：略低头看纸
+
+    function headTransform(angle) {
+      return `translate(${headPivotX},${headPivotY}) scale(-1,1) rotate(${angle}) translate(${-headPivotX},${-headPivotY})`;
+    }
+
+    headGroup.attr("transform", headTransform(baseHeadAngle));
+
+    // 3. 身体（坐在椅子上）
+    const body = g.append("g").attr("stroke-linecap", "round");
+    body.append("path").attr("d", "M295,140 L295,190 L300,240");
+    body.append("path").attr("d", "M300,240 L290,290");
+    body.append("path").attr("d", "M305,240 L325,295");
+    body.append("ellipse").attr("cx", 290).attr("cy", 302).attr("rx", 11).attr("ry", 8);
+    body.append("ellipse").attr("cx", 325).attr("cy", 310).attr("rx", 11).attr("ry", 8);
+
+    // 4. 左臂 + 铅笔（动画）
+    const armLeft = g.append("g");
+    armLeft.append("path")
+      .attr("d", "M295,185 Q255,195 235,225")
+      .attr("stroke-linecap", "round");
+    armLeft.append("circle").attr("cx", 235).attr("cy", 225).attr("r", 10);
+
+    const pencilGroup = armLeft.append("g");
+    pencilGroup.append("line")
+      .attr("x1", 235).attr("y1", 222)
+      .attr("x2", 210).attr("y2", 195)
+      .attr("stroke-linecap", "round").attr("stroke-width", 3);
+    pencilGroup.append("polygon").attr("points", "210,195 200,190 207,200");
+
+    // 5. 右臂 + 纸
+    const armRight = g.append("g");
+    armRight.append("path")
+      .attr("d", "M295,188 Q330,200 345,230")
+      .attr("stroke-linecap", "round");
+    armRight.append("circle").attr("cx", 345).attr("cy", 230).attr("r", 10);
+
+    const paperGroup = armRight.append("g");
+    paperGroup.append("polygon").attr("points", "340,225 380,210 405,220 365,235");
+    paperGroup.append("path").attr("d", "M380,210 Q375,225 365,235");
+
+    // 6. 左手摇晃动画
+    const pivotX = 295, pivotY = 185; let swingDir = 1;
+    armLeft.attr("transform", `rotate(-10,${pivotX},${pivotY})`);
+    d3.interval(() => {
+      swingDir *= -1;
+      armLeft.transition().duration(700)
+        .attr("transform", `rotate(${-10 + swingDir * 6},${pivotX},${pivotY})`);
+    }, 700);
+
+    // 7. 铅笔交互
+    const cx = 225, cy = 210;
+    pencilGroup.style("cursor", "pointer")
+      .on("mouseover", function () {
+        const p = d3.select(this);
+        p.raise();
+        p.transition().duration(200)
+          .attr("transform",
+            `translate(${cx},${cy}) scale(1.4) translate(${-cx},${-cy})`);
+        p.selectAll("line,polygon").attr("stroke", "#ff7f2a");
+      })
+      .on("mouseout", function () {
+        const p = d3.select(this);
+        p.transition().duration(200).attr("transform", "translate(0,0)");
+        p.selectAll("line,polygon").attr("stroke", strokeColor);
+      });
+
+    // 8. 整体淡入
+    g.attr("opacity", 0).transition().duration(900).attr("opacity", 1);
+
+    // 9. 头部左右摇晃动画
+    let headSwingDir = 1;
+    const headSwingDelta = 6;
+    const headSwingDuration = 700;
+
+    d3.interval(() => {
+      headSwingDir *= -1;
+      const angle = baseHeadAngle + headSwingDir * headSwingDelta;
+
+      headGroup.transition()
+        .duration(headSwingDuration)
+        .attr("transform", headTransform(angle));
+    }, headSwingDuration);
+  })();
   </script>
 </body>
 </html>
-
