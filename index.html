@@ -73,7 +73,7 @@
 
   <h3>Little robot</h3>
   <div id="robotChart"></div>
-    <p id="processText">
+  <p id="processText">
     Process: The small robot’s head and hands of in this picture have been added with a shaking transition effect. And there is an interactive effect here. When the cursor moves over the pencil, the pencil will turn orange. I took screenshots of the reference image and the assignment requirements and sent them to Chatgpt, saying "Based on the requirements in the picture, help me draw this chart using D3.js". The reference image was at a 45-degree angle from the side, but it gave me a frontal image, so I said "Adjust the camera angle to a 45-degree angle from the side and add transition effects (for example, the hand holding the pencil can shake) and interaction effects (for example, when the cursor moves over the pencil in the hand, the pencil will change color). 
 So this is the completed interaction effect and transition effect. Then I made further details adjustments, such as 'The head rotates clockwise 30 degrees to look at the paper in the right hand', and finally completed this picture.
  </p>
@@ -91,7 +91,7 @@ I took screenshots of the reference diagram and the assignment requirements and 
   <div id="vennTooltip" class="tooltip"></div>
 
   <script>
-  // ================== 图 1：平行四边形（带交互） ==================
+  // ================== 图 1：平行四边形（带交互，滚动触发动画） ==================
   (function () {
     const cols = 10;
     const rows = 5;
@@ -194,13 +194,6 @@ I took screenshots of the reference diagram and the assignment requirements and 
         tooltip.style("opacity", 0);
       });
 
-    sides
-      .transition()
-      .duration(1200)
-      .delay((d, i) => i * 250)
-      .attr("x2", d => xScale(d.to.x))
-      .attr("y2", d => yScale(d.to.y));
-
     const diagData = [
       {
         from: pts.e2b,
@@ -254,13 +247,38 @@ I took screenshots of the reference diagram and the assignment requirements and 
         tooltip.style("opacity", 0);
       });
 
-    diagonals
-      .transition()
-      .duration(1000)
-      .delay((d, i) => 1000 + i * 300)
-      .attr("x2", d => xScale(d.to.x))
-      .attr("y2", d => yScale(d.to.y));
+    const intersection = {
+      x: (pts.e1a.x + pts.e2b.x) / 2,
+      y: (pts.e1a.y + pts.e2b.y) / 2
+    };
 
+    const interCircle = svg.append("circle")
+      .attr("cx", xScale(intersection.x))
+      .attr("cy", yScale(intersection.y))
+      .attr("r", 0)
+      .attr("fill", "#333");
+
+    interCircle
+      .style("cursor", "pointer")
+      .on("mouseover", function (event) {
+        d3.select(this).transition().duration(150).attr("r", 6);
+        tooltip
+          .style("opacity", 1)
+          .html("平行四边形对角线的交点")
+          .style("left", (event.pageX + 10) + "px")
+          .style("top",  (event.pageY + 5) + "px");
+      })
+      .on("mousemove", function (event) {
+        tooltip
+          .style("left", (event.pageX + 10) + "px")
+          .style("top",  (event.pageY + 5) + "px");
+      })
+      .on("mouseout", function () {
+        d3.select(this).transition().duration(150).attr("r", 4);
+        tooltip.style("opacity", 0);
+      });
+
+    const labelNodes = [];
     function drawLabel(p, alphaOrBeta, index, offsetX, offsetY) {
       const tx = xScale(p.x) + (offsetX || 0);
       const ty = yScale(p.y) + (offsetY || 0);
@@ -282,7 +300,7 @@ I took screenshots of the reference diagram and the assignment requirements and 
         .attr("baseline-shift", "sub")
         .attr("font-size", "60%")
         .text(index);
-      text.transition().delay(800).duration(600).style("opacity", 1);
+      labelNodes.push(text);
     }
 
     drawLabel(pts.e1a, "α", "1",  15, -15);
@@ -290,45 +308,39 @@ I took screenshots of the reference diagram and the assignment requirements and 
     drawLabel(pts.e1b, "β", "1",  15,  25);
     drawLabel(pts.e2b, "β", "2", -20,  25);
 
-    const intersection = {
-      x: (pts.e1a.x + pts.e2b.x) / 2,
-      y: (pts.e1a.y + pts.e2b.y) / 2
-    };
+    function runParaAnimation() {
+      sides
+        .transition()
+        .duration(1200)
+        .delay((d, i) => i * 250)
+        .attr("x2", d => xScale(d.to.x))
+        .attr("y2", d => yScale(d.to.y));
 
-    const interCircle = svg.append("circle")
-      .attr("cx", xScale(intersection.x))
-      .attr("cy", yScale(intersection.y))
-      .attr("r", 0)
-      .attr("fill", "#333");
+      diagonals
+        .transition()
+        .duration(1000)
+        .delay((d, i) => 1000 + i * 300)
+        .attr("x2", d => xScale(d.to.x))
+        .attr("y2", d => yScale(d.to.y));
 
-    interCircle
-      .transition()
-      .delay(2200)
-      .duration(400)
-      .attr("r", 4);
+      interCircle
+        .transition()
+        .delay(2200)
+        .duration(400)
+        .attr("r", 4);
 
-    interCircle
-      .style("cursor", "pointer")
-      .on("mouseover", function (event) {
-        d3.select(this).transition().duration(150).attr("r", 6);
-        tooltip
-          .style("opacity", 1)
-          .html("平行四边形对角线的交点")
-          .style("left", (event.pageX + 10) + "px")
-          .style("top",  (event.pageY + 5) + "px");
-      })
-      .on("mousemove", function (event) {
-        tooltip
-          .style("left", (event.pageX + 10) + "px")
-          .style("top",  (event.pageY + 5) + "px");
-      })
-      .on("mouseout", function () {
-        d3.select(this).transition().duration(150).attr("r", 4);
-        tooltip.style("opacity", 0);
+      labelNodes.forEach((t, i) => {
+        t.transition()
+          .delay(800 + i * 150)
+          .duration(600)
+          .style("opacity", 1);
       });
+    }
+
+    window.runParaAnimation = runParaAnimation;
   })();
 
-  // ================== 图 2：p₁/p₂ + position ==================
+  // ================== 图 2：p₁/p₂ + position（滚动触发动画） ==================
   (function () {
     const width  = 1150;
     const height = 360;
@@ -403,11 +415,6 @@ I took screenshots of the reference diagram and the assignment requirements and 
       .attr("stroke", "#5b3a8c")
       .attr("stroke-dasharray", "4,2")
       .style("cursor", "pointer");
-
-    highBar.transition()
-      .duration(800)
-      .attr("y", yL(barTop))
-      .attr("height", yL(lowP1Height) - yL(barTop));
 
     highBar
       .on("mouseover", function () {
@@ -605,11 +612,7 @@ I took screenshots of the reference diagram and the assignment requirements and 
     const totalLength = solidPath.node().getTotalLength();
     solidPath
       .attr("stroke-dasharray", totalLength + " " + totalLength)
-      .attr("stroke-dashoffset", totalLength)
-      .transition()
-      .duration(1500)
-      .ease(d3.easeLinear)
-      .attr("stroke-dashoffset", 0);
+      .attr("stroke-dashoffset", totalLength);
 
     solidPath
       .on("mouseover", function () {
@@ -618,9 +621,24 @@ I took screenshots of the reference diagram and the assignment requirements and 
       .on("mouseout", function () {
         d3.select(this).transition().duration(200).attr("stroke-width", 3);
       });
+
+    function runProbAnimation() {
+      highBar.transition()
+        .duration(800)
+        .attr("y", yL(barTop))
+        .attr("height", yL(lowP1Height) - yL(barTop));
+
+      solidPath
+        .transition()
+        .duration(1500)
+        .ease(d3.easeLinear)
+        .attr("stroke-dashoffset", 0);
+    }
+
+    window.runProbAnimation = runProbAnimation;
   })();
 
-  // ================== 图 3：Area Chart – Models over Years ==================
+  // ================== 图 3：Area Chart – Models over Years（滚动触发动画） ==================
   (function () {
     const width = 1200, height = 260;
     const margin = { top: 25, right: 20, bottom: 45, left: 70 };
@@ -781,15 +799,17 @@ I took screenshots of the reference diagram and the assignment requirements and 
 
     const group = svg.append("g");
 
-    group.selectAll("path")
+    const areas = group.selectAll("path")
       .data(series)
       .enter()
       .append("path")
       .attr("fill", d => d.color)
       .attr("opacity", 0)
-      .attr("d", d => areaZero(d.values))
+      .attr("d", d => areaZero(d.values));
+
+    areas
       .on("mouseover", function (e, d) {
-        svg.selectAll("path").attr("opacity", 0.15);
+        areas.attr("opacity", 0.15);
         d3.select(this).attr("opacity", 0.9);
         tooltipArea.style("opacity", 1);
       })
@@ -803,14 +823,9 @@ I took screenshots of the reference diagram and the assignment requirements and 
           .style("top", e.pageY - 24 + "px");
       })
       .on("mouseout", function () {
-        svg.selectAll("path").attr("opacity", d => d.opacity);
+        areas.attr("opacity", d => d.opacity);
         tooltipArea.style("opacity", 0);
-      })
-      .transition()
-      .duration(1200)
-      .delay((d, i) => i * 250)
-      .attr("opacity", d => d.opacity)
-      .attr("d", d => area(d.values));
+      });
 
     const legend = svg.append("g")
       .attr("transform", `translate(${margin.left + 10}, ${margin.top + 5})`);
@@ -830,9 +845,20 @@ I took screenshots of the reference diagram and the assignment requirements and 
       .attr("x", 22)
       .attr("y", 8)
       .text(d => d.name);
+
+    function runAreaAnimation() {
+      areas
+        .transition()
+        .duration(1200)
+        .delay((d, i) => i * 250)
+        .attr("opacity", d => d.opacity)
+        .attr("d", d => area(d.values));
+    }
+
+    window.runAreaAnimation = runAreaAnimation;
   })();
 
-  // ================== 图 4：小电脑人 – 俯视45° + 头部摇晃 ==================
+  // ================== 图 4：小电脑人 – 滚动触发淡入 + 摇晃 ==================
   (function () {
     const width = 650, height = 420, strokeColor = "#4a5aa8";
 
@@ -846,7 +872,8 @@ I took screenshots of the reference diagram and the assignment requirements and 
       .attr("stroke", strokeColor)
       .attr("fill", "none")
       .attr("stroke-width", 2)
-      .attr("stroke-linejoin", "round");
+      .attr("stroke-linejoin", "round")
+      .attr("opacity", 0); // 初始透明，滚动到时淡入
 
     // 椅子
     const bench = g.append("g");
@@ -909,15 +936,6 @@ I took screenshots of the reference diagram and the assignment requirements and 
     paperGroup.append("polygon").attr("points", "340,225 380,210 405,220 365,235");
     paperGroup.append("path").attr("d", "M380,210 Q375,225 365,235");
 
-    // 左手摇晃
-    const pivotX = 295, pivotY = 185; let swingDir = 1;
-    armLeft.attr("transform", `rotate(-10,${pivotX},${pivotY})`);
-    d3.interval(() => {
-      swingDir *= -1;
-      armLeft.transition().duration(700)
-        .attr("transform", `rotate(${-10 + swingDir * 6},${pivotX},${pivotY})`);
-    }, 700);
-
     // 铅笔交互
     const cx = 225, cy = 210;
     pencilGroup.style("cursor", "pointer")
@@ -935,25 +953,44 @@ I took screenshots of the reference diagram and the assignment requirements and 
         p.selectAll("line,polygon").attr("stroke", strokeColor);
       });
 
-    // 整体淡入
-    g.attr("opacity", 0).transition().duration(900).attr("opacity", 1);
+    const pivotX = 295, pivotY = 185;
+    armLeft.attr("transform", `rotate(-10,${pivotX},${pivotY})`);
 
-    // 头部左右摇晃
-    let headSwingDir = 1;
-    const headSwingDelta = 6;
-    const headSwingDuration = 700;
+    let robotStarted = false;
+    function runRobotAnimation() {
+      if (robotStarted) return;
+      robotStarted = true;
 
-    d3.interval(() => {
-      headSwingDir *= -1;
-      const angle = baseHeadAngle + headSwingDir * headSwingDelta;
+      // 整体淡入
+      g.transition().duration(900).attr("opacity", 1);
 
-      headGroup.transition()
-        .duration(headSwingDuration)
-        .attr("transform", headTransform(angle));
-    }, headSwingDuration);
+      // 左手摇晃
+      let swingDir = 1;
+      d3.interval(() => {
+        swingDir *= -1;
+        armLeft.transition().duration(700)
+          .attr("transform", `rotate(${-10 + swingDir * 6},${pivotX},${pivotY})`);
+      }, 700);
+
+      // 头部左右摇晃
+      let headSwingDir = 1;
+      const headSwingDelta = 6;
+      const headSwingDuration = 700;
+
+      d3.interval(() => {
+        headSwingDir *= -1;
+        const angle = baseHeadAngle + headSwingDir * headSwingDelta;
+
+        headGroup.transition()
+          .duration(headSwingDuration)
+          .attr("transform", headTransform(angle));
+      }, headSwingDuration);
+    }
+
+    window.runRobotAnimation = runRobotAnimation;
   })();
 
-  // ================== 图 5：Venn Diagram – Delete / Replace / Rewrite ==================
+  // ================== 图 5：Venn Diagram – 滚动触发动画 ==================
   (function () {
     const width = 1000, height = 660;
 
@@ -962,7 +999,6 @@ I took screenshots of the reference diagram and the assignment requirements and 
       .attr("width", width)
       .attr("height", height);
 
-    // 三个圆
     const circlesData = [
       {id:"delete",  label:"Delete",  cx:379, cy:434, r:170, color:"rgb(199,196,231)"},
       {id:"replace", label:"Replace", cx:471, cy:234, r:170, color:"rgb(201,190,189)"},
@@ -982,12 +1018,6 @@ I took screenshots of the reference diagram and the assignment requirements and 
       .attr("fill", d => d.color)
       .style("fill-opacity", 0)
       .attr("stroke","none");
-
-    circles.transition()
-      .duration(1000)
-      .delay((d,i)=>i*250)
-      .attr("r", d => d.r)
-      .style("fill-opacity", 0.75);
 
     circles
       .on("mouseover", function(event,d){
@@ -1046,11 +1076,6 @@ I took screenshots of the reference diagram and the assignment requirements and 
       .style("opacity",0)
       .text(d => d.text);
 
-    regions.transition()
-      .duration(800)
-      .delay(900)
-      .style("opacity",1);
-
     regions
       .on("mouseover", function(){
         d3.select(this)
@@ -1062,6 +1087,74 @@ I took screenshots of the reference diagram and the assignment requirements and 
           .transition().duration(150)
           .style("font-size","30px");
       });
+
+    function runVennAnimation() {
+      circles.transition()
+        .duration(1000)
+        .delay((d,i)=>i*250)
+        .attr("r", d => d.r)
+        .style("fill-opacity", 0.75);
+
+      regions.transition()
+        .duration(800)
+        .delay(900)
+        .style("opacity",1);
+    }
+
+    window.runVennAnimation = runVennAnimation;
+  })();
+
+  // ============ IntersectionObserver：滚到图前面再启动各自动画 ============
+  (function () {
+    function initObserver() {
+      const animated = {
+        paraChart: false,
+        probChart: false,
+        areaChart: false,
+        robotChart: false,
+        vennChart: false
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const id = entry.target.id;
+          if (animated[id]) return;
+          animated[id] = true;
+
+          switch (id) {
+            case "paraChart":
+              window.runParaAnimation && window.runParaAnimation();
+              break;
+            case "probChart":
+              window.runProbAnimation && window.runProbAnimation();
+              break;
+            case "areaChart":
+              window.runAreaAnimation && window.runAreaAnimation();
+              break;
+            case "robotChart":
+              window.runRobotAnimation && window.runRobotAnimation();
+              break;
+            case "vennChart":
+              window.runVennAnimation && window.runVennAnimation();
+              break;
+          }
+        });
+      }, {
+        threshold: 0.45 // 大约进入视口一半时触发
+      });
+
+      ["paraChart", "probChart", "areaChart", "robotChart", "vennChart"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initObserver);
+    } else {
+      initObserver();
+    }
   })();
   </script>
 </body>
